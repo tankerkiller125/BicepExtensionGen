@@ -13,6 +13,31 @@ model classes), so it builds with `dotnet build`, packages with `bicep publish-e
 its docs are produced by [`bicep-local-docgen`][docgen]. The structure mirrors the
 [bicep-extension-template][template] project layout.
 
+## Install
+
+`bicepextgen` is published as a [.NET tool][dotnet-tool]. Install it globally:
+
+```bash
+dotnet tool install --global Tankerkiller125.BicepExtensionGen
+```
+
+…or add it to a tool manifest for a specific repository (recommended for reproducible builds):
+
+```bash
+dotnet new tool-manifest   # once per repo, if you don't already have .config/dotnet-tools.json
+dotnet tool install Tankerkiller125.BicepExtensionGen
+```
+
+Update or remove it later with:
+
+```bash
+dotnet tool update --global Tankerkiller125.BicepExtensionGen
+dotnet tool uninstall --global Tankerkiller125.BicepExtensionGen
+```
+
+Global installs expose the `bicepextgen` command directly; manifest-local installs run via
+`dotnet bicepextgen`.
+
 ## How it works
 
 1. **Parse** the OpenAPI document with `Microsoft.OpenApi`.
@@ -43,7 +68,7 @@ its docs are produced by [`bicep-local-docgen`][docgen]. The structure mirrors t
 ## Usage
 
 ```bash
-dotnet run --project src/BicepExtensionGen -- generate \
+bicepextgen generate \
   --input ./openapi.yaml \
   --output ./out \
   --name Contoso.PetStore \
@@ -74,7 +99,7 @@ path segment, `**` matches across segments, `?` matches one character.
 
 ```bash
 # Drop every Workers-AI model endpoint from the Cloudflare spec, by path or by tag:
-dotnet run --project src/BicepExtensionGen -- generate \
+bicepextgen generate \
   --input ./openapi.yaml --output ./out --name Cloudflare.Api \
   --exclude "**/ai/run/**" \
   --exclude-tag "Workers AI*"
@@ -123,3 +148,4 @@ file emission against `fixtures/petstore.yaml`.
 [docgen]: https://github.com/Gijsreyn/bicep-local-docgen
 [template]: https://github.com/maikvandergaag/bicep-extension-template
 [bicep]: https://aka.ms/bicep/install
+[dotnet-tool]: https://learn.microsoft.com/dotnet/core/tools/global-tools

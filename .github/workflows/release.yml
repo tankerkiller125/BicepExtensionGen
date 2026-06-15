@@ -24,6 +24,10 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Scope publishing to a protected environment. Configure it under
+    # Settings → Environments → release with required reviewers, and restrict the
+    # nuget.org trusted publishing policy to Environment = release for defence in depth.
+    environment: release
     permissions:
       contents: write # create the GitHub Release
       id-token: write # Sigstore signing for the attestation
@@ -79,9 +83,19 @@ jobs:
         with:
           subject-path: "${{ github.workspace }}/artifacts/*.nupkg"
 
+      # Trusted publishing: exchange the job's GitHub OIDC token for a short-lived
+      # nuget.org API key (valid ~1h). Requires a trusted publishing policy configured
+      # on nuget.org matching this repo + workflow file. No long-lived secret needed.
+      # https://learn.microsoft.com/nuget/nuget-org/trusted-publishing
+      - name: NuGet login (OIDC → short-lived API key)
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet.org
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: >-
           dotnet nuget push ${{ github.workspace }}/artifacts/*.nupkg
           --source https://api.nuget.org/v3/index.json
