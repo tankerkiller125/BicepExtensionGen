@@ -138,12 +138,23 @@ out/
 ## Development
 
 ```bash
-dotnet build BicepExtensionGen.slnx
+dotnet build Tankerkiller125.BicepExtensionGen.slnx
 dotnet test
 ```
 
-The test suite (`tests/BicepExtensionGen.Tests`) covers resource inference, type mapping, and
-file emission against `fixtures/petstore.yaml`.
+The test suite (`tests/Tankerkiller125.BicepExtensionGen.Tests`) covers resource inference, type
+mapping, and file emission against `fixtures/petstore.yaml`.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contributor workflow.
+
+## AI disclosure
+
+This project was developed largely with the assistance of AI coding tools — most of
+the source, tests, and supporting files were AI-generated under human direction and
+review. Contributions (whether human- or AI-authored) are still expected to meet the
+project's quality bar: they must build warning-free, pass the test suite, and be
+reviewed before merging. If you build on this project, evaluate the generated output
+for your own use case rather than assuming correctness.
 
 [docgen]: https://github.com/Gijsreyn/bicep-local-docgen
 [template]: https://github.com/maikvandergaag/bicep-extension-template
