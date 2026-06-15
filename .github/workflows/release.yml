@@ -53,7 +53,7 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Restore
-        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx
+        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx --locked-mode
 
       # Version is stamped at build time so AssemblyVersion/FileVersion/InformationalVersion
       # in the compiled DLL match the package version. `pack --no-build` below reuses these

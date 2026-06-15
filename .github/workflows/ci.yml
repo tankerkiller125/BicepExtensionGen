@@ -25,7 +25,7 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx
+        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx --locked-mode
 
       - name: Build
         run: dotnet build Tankerkiller125.BicepExtensionGen.slnx -c Release --no-restore
