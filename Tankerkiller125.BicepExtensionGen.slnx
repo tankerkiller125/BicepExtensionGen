@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src\Tankerkiller125.BicepExtensionGen\Tankerkiller125.BicepExtensionGen.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests\Tankerkiller125.BicepExtensionGen.Tests\Tankerkiller125.BicepExtensionGen.Tests.csproj" />
+  </Folder>
+</Solution>

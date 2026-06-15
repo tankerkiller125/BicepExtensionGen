@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: Edge Case API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    # Self-referential schema (cyclic $ref) — must not infinitely recurse.
+    Node:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+        parent:
+          $ref: '#/components/schemas/Node'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+    Gadget:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    Widget:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+    Stream:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        mode:
+          type: string
+          # Values that PascalCase to the same C# identifier must be de-duplicated.
+          enum: [read, READ, read-write, read_write]
+paths:
+  /streams/{streamId}:
+    # Resource name "Stream" collides with System.IO.Stream — must be renamed.
+    get:
+      tags: [streams]
+      parameters:
+        - name: streamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stream'
+    delete:
+      parameters:
+        - name: streamId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: deleted
+  /nodes/{nodeId}:
+    get:
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+  # A non-recursive, uniquely-named collection should keep its short leaf name.
+  /widgets/{widgetId}:
+    get:
+      parameters:
+        - name: widgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Widget'
+  # Same leaf ("gadgets") under two different parents must disambiguate by parent context,
+  # producing AccountGadget / TeamGadget rather than Gadget / Gadget2.
+  /accounts/{accountId}/gadgets/{gadgetId}:
+    get:
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gadgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gadget'
+  /teams/{teamId}/gadgets/{gadgetId}:
+    get:
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: gadgetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gadget'

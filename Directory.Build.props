@@ -1,0 +1,26 @@
+<Project>
+
+  <!--
+    Reproducible builds + Source Link.
+
+    DotNet.ReproducibleBuilds turns on deterministic, source-linked, embedded-symbol
+    builds and sets ContinuousIntegrationBuild=true automatically when it detects a CI
+    system (e.g. GITHUB_ACTIONS). It also pulls in the right Microsoft.SourceLink.*
+    package for the repository host, so the produced package maps PDB sequence points
+    back to exact commits on GitHub.
+
+    See:
+      https://github.com/dotnet/reproducible-builds
+      https://devblogs.microsoft.com/dotnet/producing-packages-with-source-link/
+  -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DotNet.ReproducibleBuilds" Version="2.0.2" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

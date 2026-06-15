@@ -1,0 +1,61 @@
+openapi: 3.0.3
+info:
+  title: Auth Coverage API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+components:
+  securitySchemes:
+    headerKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    queryKey:
+      type: apiKey
+      in: query
+      name: api_key
+    cookieKey:
+      type: apiKey
+      in: cookie
+      name: session
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: http
+      scheme: bearer
+    oauth2Scheme:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.example.com/oauth/token
+          scopes: {}
+    oidcScheme:
+      type: openIdConnect
+      openIdConnectUrl: https://api.example.com/.well-known/openid-configuration
+    digestAuth:
+      type: http
+      scheme: digest
+  schemas:
+    Thing:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+paths:
+  /things/{thingId}:
+    get:
+      parameters:
+        - name: thingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thing'

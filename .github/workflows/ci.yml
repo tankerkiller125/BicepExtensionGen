@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx
+
+      - name: Build
+        run: dotnet build Tankerkiller125.BicepExtensionGen.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test Tankerkiller125.BicepExtensionGen.slnx -c Release --no-build

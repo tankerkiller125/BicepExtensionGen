@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- dotnet tool packaging -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>bicepextgen</ToolCommandName>
+    <PackageId>Tankerkiller125.BicepExtensionGen</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Matthew Kilgore</Authors>
+    <Description>Generate a .NET Bicep extension (with reference docs) from any OpenAPI 3.0 document.</Description>
+    <PackageTags>bicep;openapi;codegen;dotnet-tool</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/tankerkiller125/BicepExtensionGen</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/tankerkiller125/BicepExtensionGen</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Humanizer.Core" Version="3.0.10" />
+    <PackageReference Include="Microsoft.OpenApi" Version="3.6.0" />
+    <PackageReference Include="Microsoft.OpenApi.YamlReader" Version="3.6.0" />
+  </ItemGroup>
+
+</Project>

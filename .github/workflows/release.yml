@@ -1,0 +1,100 @@
+name: Release
+
+# Publishes the dotnet tool to NuGet.org with a build-provenance attestation and a
+# GitHub Release. Triggered by pushing a SemVer tag, e.g.:
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# The package is built reproducibly (see Directory.Build.props); the attestation binds
+# the produced .nupkg to this workflow run so consumers can verify its provenance with
+#   gh attestation verify <file>.nupkg --repo <owner>/<repo>
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub Release
+      id-token: write # Sigstore signing for the attestation
+      attestations: write # upload the attestation
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@9a946fdbd5fb07b82b2f5a4466058b876ab72bb2 # v5.3.0
+        with:
+          global-json-file: global.json
+
+      - name: Derive version from tag
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${REF_NAME#v}"
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag '$REF_NAME' is not a valid SemVer version (expected vX.Y.Z)." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore Tankerkiller125.BicepExtensionGen.slnx
+
+      # Version is stamped at build time so AssemblyVersion/FileVersion/InformationalVersion
+      # in the compiled DLL match the package version. `pack --no-build` below reuses these
+      # binaries, so passing -p:Version only at pack time would leave the DLL on 0.1.0.
+      - name: Build
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: >-
+          dotnet build Tankerkiller125.BicepExtensionGen.slnx -c Release --no-restore
+          -p:Version="$VERSION"
+
+      - name: Test
+        run: dotnet test Tankerkiller125.BicepExtensionGen.slnx -c Release --no-build
+
+      - name: Pack
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: >-
+          dotnet pack src/Tankerkiller125.BicepExtensionGen/Tankerkiller125.BicepExtensionGen.csproj
+          -c Release --no-build
+          -p:Version="$VERSION"
+          -p:ContinuousIntegrationBuild=true
+          -o ${{ github.workspace }}/artifacts
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: "${{ github.workspace }}/artifacts/*.nupkg"
+
+      - name: Push to NuGet.org
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: >-
+          dotnet nuget push ${{ github.workspace }}/artifacts/*.nupkg
+          --source https://api.nuget.org/v3/index.json
+          --api-key "$NUGET_API_KEY"
+          --skip-duplicate
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: >-
+          gh release create "$TAG"
+          --repo "${{ github.repository }}"
+          --title "$TAG"
+          --generate-notes
+          ${{ github.workspace }}/artifacts/*.nupkg

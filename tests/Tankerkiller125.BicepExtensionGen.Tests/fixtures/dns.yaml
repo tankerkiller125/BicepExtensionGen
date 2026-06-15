@@ -1,0 +1,423 @@
+openapi: 3.0.3
+info:
+  title: DNS-like API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/client/v4
+components:
+  securitySchemes:
+    api_token:
+      type: http
+      scheme: bearer
+  schemas:
+    identifier:
+      type: string
+      description: Identifier.
+      maxLength: 32
+
+    # ---- result-envelope plumbing (must be unwrapped) ----
+    api-response-single:
+      type: object
+      required: [success, errors, messages]
+      properties:
+        success:
+          type: boolean
+          description: Whether the API call was successful.
+        errors:
+          type: array
+          items: { type: string }
+        messages:
+          type: array
+          items: { type: string }
+
+    # ---- shared fields every record carries ----
+    record-shared-fields:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Complete DNS record name.
+        ttl:
+          type: number
+          description: Time To Live (TTL) of the DNS record in seconds.
+        comment:
+          type: string
+          description: Comments or notes about the DNS record.
+        proxied:
+          type: boolean
+          description: Whether the record is proxied.
+
+    # ---- per-type record variants ----
+    ARecord:
+      title: A Record
+      allOf:
+        - $ref: '#/components/schemas/record-shared-fields'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: A valid IPv4 address.
+            type:
+              type: string
+              description: Record type.
+              enum: [A]
+
+    TXTRecord:
+      title: TXT Record
+      allOf:
+        - $ref: '#/components/schemas/record-shared-fields'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: Text content for the record.
+            type:
+              type: string
+              description: Record type.
+              enum: [TXT]
+
+    CAARecord:
+      title: CAA Record
+      allOf:
+        - $ref: '#/components/schemas/record-shared-fields'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: Formatted CAA content. See 'data' to set CAA properties.
+              readOnly: true
+            data:
+              type: object
+              description: Components of a CAA record.
+              properties:
+                flags:
+                  type: number
+                tag:
+                  type: string
+                value:
+                  type: string
+            type:
+              type: string
+              description: Record type.
+              enum: [CAA]
+
+    record-without-data:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/ARecord'
+        - $ref: '#/components/schemas/TXTRecord'
+
+    record-with-data:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/CAARecord'
+
+    # ---- the write body: a discriminated union ----
+    dns-record-post:
+      type: object
+      anyOf:
+        - $ref: '#/components/schemas/record-without-data'
+        - $ref: '#/components/schemas/record-with-data'
+
+    # ---- the read shape: union + server-populated metadata ----
+    dns-record-response:
+      type: object
+      discriminator:
+        propertyName: type
+      required: [name, type, content, id]
+      allOf:
+        - type: object
+          anyOf:
+            - $ref: '#/components/schemas/record-without-data'
+            - $ref: '#/components/schemas/record-with-data'
+        - type: object
+          properties:
+            id:
+              $ref: '#/components/schemas/identifier'
+            created_on:
+              type: string
+              format: date-time
+              description: When the record was created.
+              readOnly: true
+
+    dns_response_single:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/api-response-single'
+        - type: object
+          properties:
+            result:
+              $ref: '#/components/schemas/dns-record-response'
+
+    # ---- a plain enveloped (non-union) resource for envelope-unwrap coverage ----
+    Widget:
+      type: object
+      required: [name]
+      properties:
+        id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          description: The widget name.
+        color:
+          type: string
+          description: The widget color.
+    widget_response_single:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/api-response-single'
+        - type: object
+          properties:
+            result:
+              $ref: '#/components/schemas/Widget'
+
+    # ---- a response-ONLY union (a status shape): must NOT split into variants ----
+    status_done:
+      type: object
+      properties:
+        state: { type: string, enum: [done] }
+        finished_at: { type: string, format: date-time }
+    status_pending:
+      type: object
+      properties:
+        state: { type: string, enum: [pending] }
+        started_at: { type: string, format: date-time }
+    status_response:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/api-response-single'
+        - type: object
+          properties:
+            result:
+              oneOf:
+                - $ref: '#/components/schemas/status_done'
+                - $ref: '#/components/schemas/status_pending'
+
+    # ---- an anonymous-inline union write body: un-nameable, must stay one resource ----
+    blob_post:
+      type: object
+      anyOf:
+        - type: object
+          properties:
+            inline_text: { type: string }
+        - type: object
+          properties:
+            inline_bytes: { type: string }
+
+paths:
+  /zones/{zone_id}/dns_records:
+    post:
+      tags: [DNS Records]
+      operationId: create-dns-record
+      description: Create a new DNS record for a zone.
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dns-record-post'
+      responses:
+        '200':
+          description: Create DNS Record response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dns_response_single'
+  /zones/{zone_id}/dns_records/{dns_record_id}:
+    get:
+      tags: [DNS Records]
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+        - in: path
+          name: dns_record_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      responses:
+        '200':
+          description: DNS Record response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dns_response_single'
+    put:
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+        - in: path
+          name: dns_record_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dns-record-post'
+      responses:
+        '200':
+          description: Update DNS Record response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/dns_response_single'
+    delete:
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+        - in: path
+          name: dns_record_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      responses:
+        '200':
+          description: Delete DNS Record response
+
+  # Create-only path whose body is unused; the union lives only in the response.
+  /zones/{zone_id}/clear_status:
+    post:
+      tags: [Status]
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        description: The request body is currently not used.
+        required: true
+        content:
+          application/json:
+            example: '{}'
+      responses:
+        '200':
+          description: Clear status response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/status_response'
+
+  # Create-only path with an anonymous-inline union body (no discriminator, no $ref names).
+  /zones/{zone_id}/blobs:
+    post:
+      tags: [Blobs]
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/blob_post'
+      responses:
+        '200':
+          description: Blob response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget_response_single'
+
+  # Two union endpoints with the same leaf ("things") under different parents: the variant groups
+  # must disambiguate by path (AccountThing / ZoneThing), never numeric (Thing / Thing2).
+  /accounts/{account_id}/things:
+    post:
+      tags: [Things]
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/record-without-data'
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget_response_single'
+  /zones/{zone_id}/things:
+    post:
+      tags: [Things]
+      parameters:
+        - in: path
+          name: zone_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/identifier'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/record-without-data'
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget_response_single'
+
+  /widgets/{widget_id}:
+    get:
+      tags: [Widgets]
+      parameters:
+        - in: path
+          name: widget_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Widget response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget_response_single'
+    put:
+      parameters:
+        - in: path
+          name: widget_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Widget'
+      responses:
+        '200':
+          description: Update widget response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/widget_response_single'
