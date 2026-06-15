@@ -16,7 +16,7 @@
     <Description>Generate a .NET Bicep extension (with reference docs) from any OpenAPI 3.0 document.</Description>
     <PackageTags>bicep;openapi;codegen;dotnet-tool</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/tankerkiller125/BicepExtensionGen</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/tankerkiller125/BicepExtensionGen</PackageProjectUrl>
