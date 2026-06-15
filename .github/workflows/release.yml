@@ -102,13 +102,16 @@ jobs:
           --api-key "$NUGET_API_KEY"
           --skip-duplicate
 
-      - name: Create GitHub Release
+      # The release is normally created manually in the GitHub UI (that's what pushes the
+      # tag and triggers this workflow), so we just attach the package to it. --clobber
+      # keeps re-runs idempotent. If no release exists yet (e.g. a tag pushed directly),
+      # fall back to creating one with generated notes.
+      - name: Attach package to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
-        run: >-
-          gh release create "$TAG"
-          --repo "${{ github.repository }}"
-          --title "$TAG"
-          --generate-notes
-          ${{ github.workspace }}/artifacts/*.nupkg
+          WORKSPACE: ${{ github.workspace }}
+        run: |
+          gh release upload "$TAG" --repo "$GH_REPO" --clobber "$WORKSPACE"/artifacts/*.nupkg \
+            || gh release create "$TAG" --repo "$GH_REPO" --title "$TAG" --generate-notes "$WORKSPACE"/artifacts/*.nupkg
